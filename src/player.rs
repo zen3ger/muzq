@@ -1,4 +1,3 @@
-use rodio;
 use std::fs::File;
 use std::io;
 
@@ -103,9 +102,8 @@ impl Player {
             .get(self.current)
             .ok_or(Error::TrackSelect)?
             .as_str();
-        let file = File::open(track).map_err(|e| Error::Io(e))?;
-        let source =
-            rodio::Decoder::new(io::BufReader::new(file)).map_err(|e| Error::Decoder(e))?;
+        let file = File::open(track).map_err(Error::Io)?;
+        let source = rodio::Decoder::new(io::BufReader::new(file)).map_err(Error::Decoder)?;
 
         let sink = rodio::Sink::new(&self.device);
         sink.append(source);

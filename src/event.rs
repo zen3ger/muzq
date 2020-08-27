@@ -15,7 +15,9 @@ pub enum Event {
 
 pub struct Events {
     rx: mpsc::Receiver<Event>,
+    #[allow(dead_code)]
     input_handle: thread::JoinHandle<()>,
+    #[allow(dead_code)]
     tick_handle: thread::JoinHandle<()>,
 }
 

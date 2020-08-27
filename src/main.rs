@@ -12,9 +12,10 @@ fn main() -> Result<(), Error> {
     let tracks = env::args().skip(1);
 
     // Initialize terminal
-    let stdout = io::stdout().into_raw_mode().map_err(|e| Error::Io(e))?;
-    let stdout = AlternateScreen::from(stdout);
-
+    let _stdout = {
+        let raw = io::stdout().into_raw_mode().map_err(Error::Io)?;
+        AlternateScreen::from(raw)
+    };
     let mut player = Player::new()?;
     let mut action = None;
 
@@ -28,8 +29,8 @@ fn main() -> Result<(), Error> {
     loop {
         if let Some(action) = action.take() {
             player.execute(action)?;
-            print!(
-                "{}{}{:?}: {}\n",
+            println!(
+                "{}{}{:?}: {}",
                 termion::clear::All,
                 termion::cursor::Goto(1, 1),
                 player.state(),
