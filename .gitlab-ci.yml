@@ -19,10 +19,7 @@ image: "rust:latest"
 
 # Use cargo to test the project
 test:cargo:
-  before_script:
-    - rustup component add clippy --toolchain=nightly || cargo install --git https://github.com/rust-lang/rust-clippy/ --force clippy
   script:
     - rustc --version && cargo --version  # Print version info for debugging
     - cargo build --verbose
-    - cargo clippy
-    #- cargo test --workspace --verbose
+    - cargo test --workspace --verbose
