@@ -25,6 +25,7 @@ pub(crate) struct Player {
     device: rodio::Device,
     sink: Option<rodio::Sink>,
     current: usize,
+    last: usize,
     tracks: Vec<String>, // TODO
 }
 
@@ -45,6 +46,7 @@ impl Player {
             state: State::Stopped,
             sink: None,
             current: 0,
+            last: 0,
             tracks: vec![],
             device,
         })
@@ -85,18 +87,15 @@ impl Player {
     }
 
     fn stop(&mut self) -> Result<(), Error> {
-        match self.sink.take() {
-            None => Err(Error::SinkState),
-            Some(sink) => {
-                self.state = State::Stopped;
-                sink.stop();
-                Ok(())
-            }
+        if let Some(sink) = self.sink.take() {
+            self.state = State::Stopped;
+            sink.stop();
         }
+        Ok(())
     }
 
     // XXX: rodio does not support seeking
-    fn load_current(&mut self) -> Result<(), Error> {
+    fn load(&mut self) -> Result<(), Error> {
         let track = self
             .tracks
             .get(self.current)
@@ -107,43 +106,40 @@ impl Player {
 
         let sink = rodio::Sink::new(&self.device);
         sink.append(source);
+        sink.pause();
         self.sink = Some(sink);
 
-        self.state = State::Stopped;
         Ok(())
     }
 
-    fn load_next(&mut self) -> Result<(), Error> {
+    fn next(&mut self) {
         self.current = if self.current < self.tracks.len() {
             self.current + 1
         } else {
             0
         };
-        self.load_current()?;
-
-        self.state = State::Stopped;
-        Ok(())
     }
 
-    fn load_prev(&mut self) -> Result<(), Error> {
+    fn prev(&mut self) {
         self.current = if self.current == 0 {
             self.tracks.len() - 1
         } else {
             self.current - 1
         };
-        self.load_current()?;
-
-        self.state = State::Stopped;
-        Ok(())
     }
 
     pub fn execute(&mut self, action: Action) -> Result<(), Error> {
         match action {
             Action::Play => match self.state {
                 State::Playing => Err(Error::PlayerState),
-                State::Paused => self.play(),
+                State::Paused => {
+                    if self.current != self.last {
+                        self.load()?;
+                    }
+                    self.play()
+                }
                 State::Stopped => {
-                    self.load_current()?;
+                    self.load()?;
                     self.play()
                 }
             },
@@ -156,29 +152,36 @@ impl Player {
                 State::Stopped => Ok(()),
             },
             Action::Rewind => {
-                if let State::Stopped = self.state {
-                    Ok(())
-                } else {
-                    let state = self.state;
-                    self.load_current()?;
-                    if let State::Playing = state {
-                        self.play()?;
-                    }
-                    Ok(())
-                }
+                self.stop()?;
+                self.load()?;
+                self.play()
             }
             Action::NextTrack => {
-                self.load_next()?;
-                match self.state {
-                    State::Playing => self.play(),
-                    _ => Ok(()),
+                let action = if let State::Playing = self.state {
+                    Some(Action::Play)
+                } else {
+                    None
+                };
+                self.stop()?;
+                self.next();
+                if action.is_some() {
+                    self.execute(Action::Play)
+                } else {
+                    Ok(())
                 }
             }
             Action::PrevTrack => {
-                self.load_prev()?;
-                match self.state {
-                    State::Playing => self.play(),
-                    _ => Ok(()),
+                let action = if let State::Playing = self.state {
+                    Some(Action::Play)
+                } else {
+                    None
+                };
+                self.stop()?;
+                self.prev();
+                if action.is_some() {
+                    self.execute(Action::Play)
+                } else {
+                    Ok(())
                 }
             }
         }
