@@ -10,7 +10,7 @@ rust-nightly:
     - apt-get update -yqq
     - apt-get install -yqq --no-install-recommends libasound2-dev
     - rustup toolchain install nightly
-    - rustup toolchain default nighlty
+    - rustup default nighlty
     - rustup component add clippy --toolchain=nightly || cargo install --git https://github.com/rust-lang/rust-clippy/ --force clippy
     - rustup component add rustfmt-preview --toolchain=nightly || true
   script:
