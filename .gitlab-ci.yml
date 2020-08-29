@@ -1,0 +1,17 @@
+# This file is a template, and might need editing before it works on your project.
+# Official language image. Look for the different tagged releases at:
+# https://hub.docker.com/r/library/rust/tags/
+image: "rust:latest"
+
+before_script:
+  - apt-get install -yqq --no-install-recommends libasound2-dev
+  - rustup component add clippy --toolchain=nightly || cargo install --git https://github.com/rust-lang/rust-clippy/ --force clippy
+  - rustupt component add rustfmt-preview --toolchain=nightly || true
+
+# Use cargo to test the project
+test:cargo:
+  script:
+    - rustc --version && cargo --version  # Print version info for debugging
+    - which rustfmt && cargo fmt --all --verbose -- --check || true
+    - cargo clippy --workspace --verbose -- -D warnings
+    - cargo test --workspace --verbose
