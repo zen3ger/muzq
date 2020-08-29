@@ -94,7 +94,6 @@ impl Player {
         Ok(())
     }
 
-    // XXX: rodio does not support seeking
     fn load(&mut self) -> Result<(), Error> {
         let track = self
             .tracks
@@ -113,6 +112,7 @@ impl Player {
     }
 
     fn next(&mut self) {
+        self.last = self.current;
         self.current = if self.current < self.tracks.len() {
             self.current + 1
         } else {
@@ -121,6 +121,7 @@ impl Player {
     }
 
     fn prev(&mut self) {
+        self.last = self.current;
         self.current = if self.current == 0 {
             self.tracks.len() - 1
         } else {
