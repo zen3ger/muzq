@@ -4,6 +4,7 @@
 image: "rust:latest"
 
 before_script:
+  - apt-get update -yqq
   - apt-get install -yqq --no-install-recommends libasound2-dev
   - rustup component add clippy --toolchain=nightly || cargo install --git https://github.com/rust-lang/rust-clippy/ --force clippy
   - rustupt component add rustfmt-preview --toolchain=nightly || true
