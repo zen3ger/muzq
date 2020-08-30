@@ -5,7 +5,6 @@ use std::time::Duration;
 
 use termion::{event::Key, input::TermRead};
 
-pub const EXIT_KEY: Key = Key::Char('q');
 pub const TICK_RATE: u64 = 250;
 
 pub enum Event {
@@ -32,12 +31,7 @@ impl Events {
                 let stdin = io::stdin();
                 for event in stdin.keys() {
                     if let Ok(key) = event {
-                        if let Err(err) = tx.send(Event::Input(key)) {
-                            eprintln!("{}", err);
-                            return;
-                        }
-
-                        if key == EXIT_KEY {
+                        if tx.send(Event::Input(key)).is_err() {
                             return;
                         }
                     }
