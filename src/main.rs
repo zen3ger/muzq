@@ -1,14 +1,17 @@
 use std::{env, io};
 
-use termion::{event::Key, raw::IntoRawMode, screen::AlternateScreen};
+use termion::{raw::IntoRawMode, screen::AlternateScreen};
 
-mod event;
-mod player;
+mod lib;
 
-use crate::event::{Event, Events, EXIT_KEY};
-use crate::player::{Action, Error, Player, State};
+use crate::lib::{
+    event::{Event, Events},
+    player::{Action, Player, State},
+    Binding, Config, Error,
+};
 
 fn main() -> Result<(), Error> {
+    let config = Config::open()?;
     let tracks = env::args().skip(1);
 
     // Initialize terminal
@@ -39,21 +42,21 @@ fn main() -> Result<(), Error> {
         }
 
         if let Ok(Event::Input(key)) = events.next() {
-            action = match key {
-                EXIT_KEY => return player.execute(Action::Stop),
-
-                Key::Char(' ') => match player.state() {
-                    State::Playing => Some(Action::Pause),
-                    State::Paused | State::Stopped => Some(Action::Play),
-                },
-                Key::Char('s') => Some(Action::Stop),
-                Key::Char('>') => Some(Action::NextTrack),
-                Key::Char('<') => Some(Action::PrevTrack),
-                Key::Char('r') => Some(Action::Rewind),
-                //Key::Char('J') => Some(Action::VolDecrease),
-                //Key::Char('K') => Some(Action::VolIncrease),
-                _ => None,
-            };
+            if let Some(binding) = config.get_binding(key) {
+                action = match binding {
+                    Binding::Exit => return Ok(()),
+                    Binding::TogglePlayback => match player.state() {
+                        State::Playing => Some(Action::Pause),
+                        State::Paused | State::Stopped => Some(Action::Play),
+                    },
+                    Binding::StopPlayback => Some(Action::Stop),
+                    Binding::NextTrack => Some(Action::NextTrack),
+                    Binding::PreviousTrack => Some(Action::PrevTrack),
+                    Binding::RewindTrack => Some(Action::Rewind),
+                }
+            } else {
+                action = None;
+            }
         }
     }
 }

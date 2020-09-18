@@ -1,6 +1,8 @@
 use std::fs::File;
 use std::io;
 
+use crate::lib::Error;
+
 #[derive(Copy, Clone)]
 pub(crate) enum Action {
     Play,
@@ -27,16 +29,6 @@ pub(crate) struct Player {
     current: usize,
     last: usize,
     tracks: Vec<String>, // TODO
-}
-
-#[derive(Debug)]
-pub(crate) enum Error {
-    NoSoundDevice,
-    SinkState,
-    PlayerState,
-    Decoder(rodio::decoder::DecoderError),
-    TrackSelect,
-    Io(io::Error),
 }
 
 impl Player {
