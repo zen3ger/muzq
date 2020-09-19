@@ -1,6 +1,6 @@
 [package]
-name = "rmus"
-description = "Rust MUSic player"
+name = "muzq"
+description = "Simple TUI music player"
 version = "0.1.0"
 edition = "2018"
 authors = ["Roland Kovacs <zen3ger@tutanota.com>"]

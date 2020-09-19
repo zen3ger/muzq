@@ -28,7 +28,7 @@ pub enum Error {
     Env(std::env::VarError),
 }
 
-const CONFDIRPATH: &str = "/.config/rmus/";
+const CONFDIRPATH: &str = "/.config/muzq/";
 const CONFNAME: &str = "config.ron";
 
 #[derive(Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
