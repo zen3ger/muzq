@@ -19,7 +19,6 @@ pub mod player;
 pub enum Error {
     NoSoundDevice,
     SinkState,
-    PlayerState,
     Decoder(rodio::decoder::DecoderError),
     TrackSelect,
 
@@ -33,31 +32,27 @@ const CONFDIRPATH: &str = "/.config/rmus/";
 const CONFNAME: &str = "config.ron";
 
 #[derive(Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
-#[repr(u32)]
-pub enum Binding {
+pub enum Action {
     Exit,
-    TogglePlayback,
-    StopPlayback,
-    NextTrack,
-    PreviousTrack,
-    RewindTrack,
+    Player(player::Action),
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
-    bindings: BTreeMap<char, Binding>,
+    bindings: BTreeMap<char, Action>,
 }
 
 impl Config {
     fn default() -> Self {
         let mut bindings = BTreeMap::new();
 
-        bindings.insert('q', Binding::Exit);
-        bindings.insert(' ', Binding::TogglePlayback);
-        bindings.insert('s', Binding::StopPlayback);
-        bindings.insert('>', Binding::NextTrack);
-        bindings.insert('<', Binding::PreviousTrack);
-        bindings.insert('r', Binding::RewindTrack);
+        bindings.insert('q', Action::Exit);
+        bindings.insert(' ', Action::Player(player::Action::PlaybackToggle));
+        bindings.insert('s', Action::Player(player::Action::PlaybackStop));
+        bindings.insert('>', Action::Player(player::Action::TrackNext));
+        bindings.insert('<', Action::Player(player::Action::TrackPrevious));
+        bindings.insert('r', Action::Player(player::Action::TrackRewind));
+        bindings.insert('a', Action::Player(player::Action::RepeatModeCycle));
 
         Self { bindings }
     }
@@ -85,7 +80,7 @@ impl Config {
         }
     }
 
-    pub fn get_binding(&self, key: Key) -> Option<&Binding> {
+    pub fn get_binding(&self, key: Key) -> Option<&Action> {
         match key {
             Key::Char(c) => self.bindings.get(&c),
             _ => None,
@@ -93,7 +88,7 @@ impl Config {
     }
 
     #[allow(dead_code)]
-    pub fn get_key(&self, binding: &Binding) -> Option<char> {
+    pub fn get_key(&self, binding: &Action) -> Option<char> {
         for (key, bind) in self.bindings.iter() {
             if bind == binding {
                 return Some(*key);
