@@ -6,8 +6,8 @@ mod lib;
 
 use crate::lib::{
     event::{Event, Events},
-    player::{Action, Player, State},
-    Binding, Config, Error,
+    player::Player,
+    Action, Config, Error,
 };
 
 fn main() -> Result<(), Error> {
@@ -20,7 +20,6 @@ fn main() -> Result<(), Error> {
         AlternateScreen::from(raw)
     };
     let mut player = Player::new()?;
-    let mut action = None;
 
     for track in tracks {
         player.enqueue(track);
@@ -30,33 +29,25 @@ fn main() -> Result<(), Error> {
     let events = Events::new();
 
     loop {
-        if let Some(action) = action.take() {
-            player.execute(action)?;
-            println!(
-                "{}{}{:?}: {}",
-                termion::clear::All,
-                termion::cursor::Goto(1, 1),
-                player.state(),
-                player.now_playing().expect("no tracks")
-            );
-        }
+        match events.next() {
+            Ok(Event::Tick) => {
+                player.update()?;
 
-        if let Ok(Event::Input(key)) = events.next() {
-            if let Some(binding) = config.get_binding(key) {
-                action = match binding {
-                    Binding::Exit => return Ok(()),
-                    Binding::TogglePlayback => match player.state() {
-                        State::Playing => Some(Action::Pause),
-                        State::Paused | State::Stopped => Some(Action::Play),
-                    },
-                    Binding::StopPlayback => Some(Action::Stop),
-                    Binding::NextTrack => Some(Action::NextTrack),
-                    Binding::PreviousTrack => Some(Action::PrevTrack),
-                    Binding::RewindTrack => Some(Action::Rewind),
-                }
-            } else {
-                action = None;
+                println!(
+                    "{}{}{}",
+                    termion::clear::All,
+                    termion::cursor::Goto(1, 1),
+                    player.info()
+                );
             }
+            Ok(Event::Input(key)) => match config.get_binding(key) {
+                None => {}
+                Some(&action) => match action {
+                    Action::Exit => return Ok(()),
+                    Action::Player(action) => player.execute(action)?,
+                },
+            },
+            _ => {}
         }
     }
 }
