@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::fs::File;
 use std::io;
+use std::{fs::File, time::Duration};
 
-use crate::lib::Error;
+use crate::lib::{track::Track, Error};
 
 #[derive(Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[repr(u32)]
@@ -45,14 +45,71 @@ impl Repeate {
     }
 }
 
+struct Playlist {
+    current: usize,
+    last: usize,
+    tracks: Vec<Track>,
+}
+
+impl Playlist {
+    pub fn new() -> Self {
+        Self {
+            current: 0,
+            last: 0,
+            tracks: Vec::new(),
+        }
+    }
+
+    pub fn enqueue(&mut self, track: String) {
+        let track = Track::new(track.as_ref());
+        self.tracks.push(track);
+    }
+
+    pub fn next(&mut self) {
+        self.last = self.current;
+        self.current = if self.current < self.tracks.len() {
+            self.current + 1
+        } else {
+            0
+        };
+    }
+
+    pub fn prev(&mut self) {
+        self.last = self.current;
+        self.current = if self.current == 0 {
+            self.tracks.len() - 1
+        } else {
+            self.current - 1
+        };
+    }
+
+    pub fn track(&self) -> Option<&Track> {
+        self.tracks.get(self.current)
+    }
+
+    // FIXME: this is a horrible name
+    pub fn at(&self) -> (usize, usize, usize) {
+        (self.last, self.current, self.tracks.len())
+    }
+
+    pub fn at_end(&self) -> bool {
+        self.current + 1 == self.tracks.len()
+    }
+
+    #[allow(dead_code)]
+    pub fn at_start(&self) -> bool {
+        self.current == 0
+    }
+}
+
 pub struct Player {
     state: State,
     device: rodio::Device,
     sink: Option<rodio::Sink>,
+
     repeat: Repeate,
-    current: usize,
-    last: usize,
-    tracks: Vec<String>, // TODO
+    playlist: Playlist,
+    playback_time: Duration,
 }
 
 impl Player {
@@ -60,40 +117,60 @@ impl Player {
         let device = rodio::default_output_device().ok_or(Error::NoSoundDevice)?;
         Ok(Self {
             state: State::Stopped,
+            device: device,
             sink: None,
+
             repeat: Repeate::None,
-            current: 0,
-            last: 0,
-            tracks: vec![],
-            device,
+            playlist: Playlist::new(),
+            playback_time: Duration::from_secs(0),
         })
     }
 
     pub fn enqueue(&mut self, track: String) {
-        self.tracks.push(track);
+        self.playlist.enqueue(track);
     }
 
     // temp, just for debugging
-    pub fn info(&self) -> String {
-        format!(
-            "[{}/{}] {} {}: {}",
-            self.current + 1,
-            self.tracks.len(),
+    pub fn dbg_info(&self) {
+        let (_, at, all) = self.playlist.at();
+        let track = self.playlist.track();
+
+        println!(
+            "{}{}[{}/{}] {} {}",
+            termion::clear::All,
+            termion::cursor::Goto(1, 1),
+            at + 1,
+            all,
             match self.state {
-                State::Playing => '>',
-                State::Paused => '=',
-                State::Stopped => 'x',
+                State::Playing => "PLAY ",
+                State::Paused => "PAUSE",
+                State::Stopped => "STOP ",
             },
             match self.repeat {
-                Repeate::All => "@all",
-                Repeate::Single => "@1  ",
-                Repeate::Once => "--> ",
-                Repeate::None => "    ",
+                Repeate::All => "ALL   ",
+                Repeate::Single => "SINGLE",
+                Repeate::Once => "ONCE  ",
+                Repeate::None => "      ",
             },
-            self.tracks
-                .get(self.current)
-                .unwrap_or(&String::from("No track in queue..."))
-        )
+        );
+        if let Some(track) = track {
+            let info = track.info();
+
+            println!(
+                "{}Artist: {}{}Album: {}{}Title: {}{}Genre: {:?}{}{}:{}",
+                termion::cursor::Goto(3, 3),
+                info.tag.artist,
+                termion::cursor::Goto(3, 4),
+                info.tag.album,
+                termion::cursor::Goto(3, 5),
+                info.tag.title,
+                termion::cursor::Goto(3, 6),
+                info.tag.genre,
+                termion::cursor::Goto(1, 8),
+                self.playback_time.as_secs(),
+                info.duration.as_secs(),
+            );
+        }
     }
 
     fn play(&mut self) -> Result<(), Error> {
@@ -123,16 +200,13 @@ impl Player {
             self.state = State::Stopped;
             sink.stop();
         }
+        self.playback_time = Duration::from_secs(0);
         Ok(())
     }
 
     fn load(&mut self) -> Result<(), Error> {
-        let track = self
-            .tracks
-            .get(self.current)
-            .ok_or(Error::TrackSelect)?
-            .as_str();
-        let file = File::open(track).map_err(Error::Io)?;
+        let track = self.playlist.track().ok_or(Error::TrackSelect)?;
+        let file = File::open(track.path().as_str()).map_err(Error::Io)?;
         let source = rodio::Decoder::new(io::BufReader::new(file)).map_err(Error::Decoder)?;
 
         let sink = rodio::Sink::new(&self.device);
@@ -144,31 +218,25 @@ impl Player {
     }
 
     fn next(&mut self) {
-        self.last = self.current;
-        self.current = if self.current < self.tracks.len() {
-            self.current + 1
-        } else {
-            0
-        };
+        self.playlist.next();
     }
 
     fn prev(&mut self) {
-        self.last = self.current;
-        self.current = if self.current == 0 {
-            self.tracks.len() - 1
-        } else {
-            self.current - 1
-        };
+        self.playlist.prev();
     }
 
-    pub fn update(&mut self) -> Result<(), Error> {
+    pub fn update(&mut self, delta: u64) -> Result<(), Error> {
+        if self.state == State::Playing {
+            self.playback_time += std::time::Duration::from_millis(delta);
+        }
+
         if self.sink.as_ref().map_or(false, |s| s.empty()) {
             match self.repeat {
                 Repeate::None => self.execute(Action::PlaybackStop),
                 Repeate::All => self.execute(Action::TrackNext),
                 Repeate::Single => self.execute(Action::TrackRewind),
                 Repeate::Once => {
-                    let action = if self.current + 1 != self.tracks.len() {
+                    let action = if !self.playlist.at_end() {
                         Action::TrackNext
                     } else {
                         Action::PlaybackStop
@@ -186,7 +254,8 @@ impl Player {
             Action::PlaybackToggle => match self.state {
                 State::Playing => self.pause(),
                 State::Paused => {
-                    if self.current != self.last {
+                    let (last, current, _) = self.playlist.at();
+                    if last != current {
                         self.load()?;
                     }
                     self.play()

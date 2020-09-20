@@ -14,6 +14,7 @@ use termion::event::Key;
 
 pub mod event;
 pub mod player;
+pub mod track;
 
 #[derive(Debug)]
 pub enum Error {

@@ -237,9 +237,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mp3-metadata"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb969bc3573726b0bf60238d5d70f1aa6cc0f9e87f8db3e047b8309317319699"
+
+[[package]]
 name = "muzq"
 version = "0.1.0"
 dependencies = [
+ "mp3-metadata",
  "rand",
  "rodio",
  "ron",

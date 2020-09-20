@@ -30,15 +30,10 @@ fn main() -> Result<(), Error> {
 
     loop {
         match events.next() {
-            Ok(Event::Tick) => {
-                player.update()?;
+            Ok(Event::Tick(delta)) => {
+                player.update(delta)?;
 
-                println!(
-                    "{}{}{}",
-                    termion::clear::All,
-                    termion::cursor::Goto(1, 1),
-                    player.info()
-                );
+                player.dbg_info();
             }
             Ok(Event::Input(key)) => match config.get_binding(key) {
                 None => {}
