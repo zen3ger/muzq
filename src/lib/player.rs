@@ -114,10 +114,9 @@ pub struct Player {
 
 impl Player {
     pub fn new() -> Result<Self, Error> {
-        let device = rodio::default_output_device().ok_or(Error::NoSoundDevice)?;
         Ok(Self {
             state: State::Stopped,
-            device: device,
+            device: rodio::default_output_device().ok_or(Error::NoSoundDevice)?,
             sink: None,
 
             repeat: Repeate::None,
