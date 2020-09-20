@@ -156,7 +156,7 @@ impl Player {
             let info = track.info();
 
             println!(
-                "{}Artist: {}{}Album: {}{}Title: {}{}Genre: {:?}{}{}:{}",
+                "{}Artist: {}{}Album: {}{}Title: {}{}Genre: {:?}{}{} {}/{}",
                 termion::cursor::Goto(3, 3),
                 info.tag.artist,
                 termion::cursor::Goto(3, 4),
@@ -166,8 +166,9 @@ impl Player {
                 termion::cursor::Goto(3, 6),
                 info.tag.genre,
                 termion::cursor::Goto(1, 8),
-                self.playback_time.as_secs(),
-                info.duration.as_secs(),
+                progress(&self.playback_time, &info.duration),
+                format_duration(&self.playback_time),
+                format_duration(&info.duration),
             );
         }
     }
@@ -304,4 +305,41 @@ impl Player {
             Action::VolumeDecrease | Action::VolumeIncrease => Ok(()),
         }
     }
+}
+
+fn format_duration(duration: &Duration) -> String {
+    let mut sec = duration.as_secs();
+    let hour = sec / 3600;
+    sec -= hour * 3600;
+    let min = sec / 60;
+    sec -= min * 60;
+
+    if hour != 0 {
+        format!("{:02}:{:02}:{:02}", hour, min, sec)
+    } else {
+        format!("{:02}:{:02}", min, sec)
+    }
+}
+
+fn progress(playback: &Duration, length: &Duration) -> String {
+    let psec = playback.as_secs();
+    let lsec = length.as_secs();
+    let ratio = ((psec as f32 / lsec as f32) * 20.0) as usize;
+
+    let mut buf = String::with_capacity(22);
+
+    buf.push('[');
+    for i in 2..buf.capacity() {
+        if i <= ratio {
+            buf.push('-');
+        } else {
+            buf.push(' ');
+        }
+    }
+    buf.push(']');
+
+    assert_eq!(buf.len(), 22);
+    assert_eq!(buf.capacity(), 22);
+
+    buf
 }

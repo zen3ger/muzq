@@ -17,7 +17,8 @@ fn main() -> Result<(), Error> {
     // Initialize terminal
     let _stdout = {
         let raw = io::stdout().into_raw_mode().map_err(Error::Io)?;
-        AlternateScreen::from(raw)
+        let alt = AlternateScreen::from(raw);
+        termion::cursor::HideCursor::from(alt)
     };
     let mut player = Player::new()?;
 
