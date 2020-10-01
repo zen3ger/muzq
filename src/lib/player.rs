@@ -153,22 +153,23 @@ impl Player {
             },
         );
         if let Some(track) = track {
-            let info = track.info();
+            let dur = track.duration();
 
             println!(
-                "{}Artist: {}{}Album: {}{}Title: {}{}Genre: {:?}{}{} {}/{}",
+                "{}Artist: {}{}Album: {} ({}){}Title: {}{}Genre: {}{}{} {}/{}",
                 termion::cursor::Goto(3, 3),
-                info.tag.artist,
+                track.artist(),
                 termion::cursor::Goto(3, 4),
-                info.tag.album,
+                track.album(),
+                track.year(),
                 termion::cursor::Goto(3, 5),
-                info.tag.title,
+                track.title(),
                 termion::cursor::Goto(3, 6),
-                info.tag.genre,
+                track.genre(),
                 termion::cursor::Goto(1, 8),
-                progress(&self.playback_time, &info.duration),
+                progress(&self.playback_time, dur),
                 format_duration(&self.playback_time),
-                format_duration(&info.duration),
+                format_duration(dur),
             );
         }
     }
@@ -337,9 +338,6 @@ fn progress(playback: &Duration, length: &Duration) -> String {
         }
     }
     buf.push(']');
-
-    assert_eq!(buf.len(), 22);
-    assert_eq!(buf.capacity(), 22);
 
     buf
 }
