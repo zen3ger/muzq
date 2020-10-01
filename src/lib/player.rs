@@ -67,7 +67,7 @@ impl Playlist {
 
     pub fn next(&mut self) {
         self.last = self.current;
-        self.current = if self.current < self.tracks.len() {
+        self.current = if self.current < self.tracks.len() - 1 {
             self.current + 1
         } else {
             0
