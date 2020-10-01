@@ -1,6 +1,3 @@
-use metaflac;
-use mp3_metadata;
-
 use std::{convert::From, default::Default, time::Duration};
 
 pub struct Metadata {
