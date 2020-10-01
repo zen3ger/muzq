@@ -9,7 +9,7 @@ pub const TICK_RATE: u64 = 250;
 
 pub enum Event {
     Input(Key),
-    Tick,
+    Tick(u64),
 }
 
 pub struct Events {
@@ -41,7 +41,7 @@ impl Events {
 
         let tick_handle = {
             thread::spawn(move || loop {
-                if tx.send(Event::Tick).is_err() {
+                if tx.send(Event::Tick(TICK_RATE)).is_err() {
                     return;
                 }
                 thread::sleep(Duration::from_millis(TICK_RATE));
