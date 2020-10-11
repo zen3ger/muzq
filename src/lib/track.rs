@@ -1,7 +1,7 @@
 use std::{convert::From, default::Default, time::Duration};
 
 pub struct Metadata {
-    duration: Duration,
+    duration: Option<Duration>,
     artist: String,
     title: String,
     album: String,
@@ -26,7 +26,7 @@ impl From<mp3_metadata::MP3Metadata> for Metadata {
     fn from(mp3: mp3_metadata::MP3Metadata) -> Self {
         if let Some(tag) = &mp3.tag {
             Self {
-                duration: mp3.duration,
+                duration: Some(mp3.duration),
                 artist: tag.artist.clone(),
                 title: tag.title.clone(),
                 album: tag.album.clone(),
@@ -37,7 +37,7 @@ impl From<mp3_metadata::MP3Metadata> for Metadata {
             }
         } else {
             let mut meta = Self::default();
-            meta.duration = mp3.duration;
+            meta.duration = Some(mp3.duration);
 
             meta
         }
@@ -56,7 +56,7 @@ impl From<metaflac::Tag> for Metadata {
                 meta.artist.replace_range(.., artist.as_str());
             }
 
-            if let Some(Some(title)) = vc.title().map(|a| a.first()) {
+            if let Some(Some(title)) = vc.title().map(|t| t.first()) {
                 meta.title.replace_range(.., title.as_str());
             }
 
@@ -64,20 +64,18 @@ impl From<metaflac::Tag> for Metadata {
                 meta.album.replace_range(.., album.as_str());
             }
 
-            if let Some(Some(genre)) = vc.genre().map(|a| a.first()) {
+            if let Some(Some(genre)) = vc.genre().map(|g| g.first()) {
                 meta.genre.replace_range(.., genre.as_str());
             }
 
-            if let Some(date) = vc.get("DATE") {
-                meta.year = match date.first() {
-                    None => 0,
-                    Some(date) => date.parse::<u16>().unwrap_or(0),
-                };
+            if let Some(Some(date)) = vc.get("DATE").map(|d| d.first()) {
+                meta.year = date.parse::<u16>().unwrap_or(0);
             }
         }
 
         if let Some(metaflac::Block::StreamInfo(si)) = stream_info.next() {
-            meta.duration = Duration::from_secs(si.total_samples / si.sample_rate as u64);
+            let secs = si.total_samples / si.sample_rate as u64;
+            meta.duration = Some(Duration::from_secs(secs));
         }
 
         meta
@@ -87,7 +85,7 @@ impl From<metaflac::Tag> for Metadata {
 impl Default for Metadata {
     fn default() -> Self {
         Self {
-            duration: Duration::new(0, 0),
+            duration: None,
             artist: "Unknown".to_owned(),
             title: "Unknown".to_owned(),
             album: "Unknown".to_owned(),
@@ -110,7 +108,7 @@ impl Track {
         }
     }
 
-    pub fn duration(&self) -> &Duration {
+    pub fn duration(&self) -> &Option<Duration> {
         &self.meta.duration
     }
 

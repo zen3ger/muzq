@@ -153,7 +153,11 @@ impl Player {
             },
         );
         if let Some(track) = track {
-            let dur = track.duration();
+            let (prog, dur_fmt) = if let Some(dur) = track.duration() {
+                (progress(&self.playback_time, dur), format_duration(&dur))
+            } else {
+                (" ".repeat(PROGRESS_BUFSIZE), "??:??".to_owned())
+            };
 
             println!(
                 "{}Artist: {}{}Album: {} ({}){}Title: {}{}Genre: {}{}{} {}/{}",
@@ -167,9 +171,9 @@ impl Player {
                 termion::cursor::Goto(3, 6),
                 track.genre(),
                 termion::cursor::Goto(1, 8),
-                progress(&self.playback_time, dur),
+                prog,
                 format_duration(&self.playback_time),
-                format_duration(dur),
+                dur_fmt
             );
         }
     }
@@ -322,12 +326,15 @@ fn format_duration(duration: &Duration) -> String {
     }
 }
 
+const PROGRESS_BUFSIZE: usize = 22;
+
 fn progress(playback: &Duration, length: &Duration) -> String {
     let psec = playback.as_secs();
     let lsec = length.as_secs();
-    let ratio = ((psec as f32 / lsec as f32) * 20.0) as usize;
 
-    let mut buf = String::with_capacity(22);
+    let ratio = ((psec / lsec) as usize) * (PROGRESS_BUFSIZE - 2);
+
+    let mut buf = String::with_capacity(PROGRESS_BUFSIZE);
 
     buf.push('[');
     for i in 2..buf.capacity() {
