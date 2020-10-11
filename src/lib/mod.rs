@@ -12,6 +12,7 @@ use std::{
 };
 use termion::event::Key;
 
+pub mod cache;
 pub mod event;
 pub mod player;
 pub mod track;
