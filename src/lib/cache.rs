@@ -71,12 +71,7 @@ pub struct Cache {
 
 impl Cache {
     pub fn new() -> Self {
-        Self {
-            playlists: Vec::new(),
-            next_id: TrackId(0),
-            tracks: HashMap::new(),
-            metas: HashMap::new(),
-        }
+        Self::default()
     }
 
     pub fn insert(&mut self, track: Track, meta: Option<Metadata>) {
@@ -108,6 +103,17 @@ impl Cache {
 
         matches.tracks.sort();
         matches
+    }
+}
+
+impl std::default::Default for Cache {
+    fn default() -> Self {
+        Self {
+            playlists: Vec::new(),
+            next_id: TrackId(0),
+            tracks: HashMap::new(),
+            metas: HashMap::new(),
+        }
     }
 }
 

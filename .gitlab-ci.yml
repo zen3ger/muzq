@@ -17,6 +17,7 @@ rust-nightly:
     - rustc --version && cargo --version
     - which rustfmt && cargo fmt --all --verbose -- --check || true
     - cargo clippy --workspace --verbose -- -D warnings
+    - cargo test --workspace --verbose
 
 rust:
   stage: build
@@ -28,3 +29,4 @@ rust:
   script:
     - rustc --version && cargo --version
     - cargo build --workspace --verbose
+    - cargo test --workspace --verbose
